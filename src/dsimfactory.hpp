@@ -53,6 +53,11 @@ class DSimFactory
    */
   void setfault(int,double,double);
 
+  /** 
+    Initialize components
+  */
+  void initialize(void);
+
   private:
   // NetworkPtr is a typedef for boost::shared_ptr<_network> defined in base_factory.hpp
     NetworkPtr p_network;

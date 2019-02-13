@@ -76,6 +76,7 @@ class DSim
     p_network->updateBuses();
 
     // Evaluate the DAE Jacobian
+    J.zero();
     p_factory->setMode(RESIDUAL_EVAL);
     p_MatMapper->mapToMatrix(J);
     //    J.print();
@@ -101,7 +102,8 @@ class DSim
     p_factory->setMode(RESIDUAL_EVAL);
     p_VecMapper->mapToVector(F);
     F.ready();
-    //F.print();
+    //    F.print();
+    //    exit(1);
   }
 
   // Build the residual for the nonlinear solver at tfaulton and tfaultoff

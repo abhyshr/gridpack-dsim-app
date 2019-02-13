@@ -1,15 +1,6 @@
 #include <stdio.h>
 #include <dsim.hpp>
 
-void daerhsfunction(const double& time, const gridpack::math::Vector& X,const gridpack::math::Vector& Xdot, gridpack::math::Vector& F)
-{
-}
-
-void daerhsjacobian(const double& time, const gridpack::math::Vector& X, const gridpack::math::Vector& Xdot, const double& shift, gridpack::math::Matrix& J)
-{
-}
-
-
 DSim::DSim(void)
 {
   p_isSetUp = 0;
@@ -73,6 +64,18 @@ void DSim::setup()
   p_factory->setComponents();
   printf("Finished setting up factory\n");
 
+  /* Set up ghost/local status */
+  p_factory->initialize();
+
+  //  p_J->print();
+
+  // Set up bus data exchange buffers.
+  p_factory->setExchange();
+
+  // Create bus data exchange
+  p_network->initBusUpdate();
+
+
   /* Create mappers and vectors, matrices */
   p_VecMapper = new gridpack::mapper::BusVectorMap<DSimNetwork>(p_network);
   p_MatMapper = new gridpack::mapper::FullMatrixMap<DSimNetwork>(p_network);
@@ -84,21 +87,15 @@ void DSim::setup()
   //  p_X->print();
 
   
-  p_factory->setMode(RESIDUAL_EVAL);
+  /*  p_factory->setMode(RESIDUAL_EVAL);
 
   p_R = p_VecMapper->mapToVector();
   p_R->zero();
-  p_VecMapper->mapToVector(p_R);
+  */
+  //  p_VecMapper->mapToVector(p_R);
   //  p_R->print();
 
   p_J = p_MatMapper->mapToMatrix();
-  //  p_J->print();
-
-  // Set up bus data exchange buffers.
-  p_factory->setExchange();
-
-  // Create bus data exchange
-  p_network->initBusUpdate();
 
   // Set up solver
   int lsize = p_X->localSize();

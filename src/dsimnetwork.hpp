@@ -141,6 +141,13 @@
       p_gl += Gs;
       p_bl += Bs;
     }
+
+    /* Set whether the element is local or ghosted */
+    void setGhostStatus(bool isghost) { p_isghost = isghost; }
+
+    bool isGhost(void) { return p_isghost; }
+
+    void setRank(int rank) { p_rank = rank; }
   private:
     // Anything declared here should be set in the Archive class in exactly the same order!!
     // Data needed for calculations
@@ -164,11 +171,16 @@
     std::vector<double> p_Ep;    // Machine internal emf
     
     // Variables
+    double *p_VDQptr; // Pointer used for exchanging values with ghost buses. Note that this pointer is pointed to the buffer used for exchanging values with ghost buses. Its contents should be updated whenever there is a change in V, e.g., when the values from vector X are being mapped to the buses.
     double p_VD,p_VQ; // Real and imaginary part of bus voltage
     std::vector<double> p_delta,p_dw; // Machine angle and speed deviation */
     
     // xdot from PETSc
     std::vector<double> p_deltadot,p_dwdot;
+
+    bool   p_isghost; // Is it a local or ghosted element
+
+    int    p_rank;
     friend class boost::serialization::access;
     
     template<class Archive>
@@ -195,7 +207,9 @@
 	& p_Ep
 	& p_VD & p_VQ
 	& p_delta & p_dw
-	& p_deltadot & p_dwdot;
+	& p_deltadot & p_dwdot
+	& p_isghost
+	& p_rank;
     }  
     
   }; // End of DSBus
@@ -285,6 +299,12 @@
      */
     bool getReverseTransferAdmittance(double*,double*);
     
+    /* Set whether the element is local or ghosted */
+    void setGhostStatus(bool isghost) { p_isghost = isghost; }
+
+    bool isGhost(void) { return p_isghost; }
+
+    void setRank(int rank) { p_rank = rank; }
   private:
     int p_nparlines; // Number of parallel lines
     std::vector<int> p_status; // Status of the lines
@@ -300,7 +320,9 @@
     std::vector<double> p_Gtt, p_Btt;
     
     int p_mode;
-    
+    bool p_isghost; // Local or ghosted element
+    int  p_rank;
+
     friend class boost::serialization::access;
     
     template<class Archive>
@@ -314,7 +336,9 @@
 	& p_Gft & p_Bft
 	& p_Gtf & p_Btf
 	& p_Gtt & p_Btt
-	& p_mode;
+	& p_mode
+	& p_isghost
+	& p_rank;
       
     }  
     

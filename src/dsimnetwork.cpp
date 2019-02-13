@@ -413,12 +413,21 @@ bool DSimBus::vectorValues(gridpack::ComplexType *values)
     int nconnbranch = branches.size();
     //    printf("Nconnbranch = %d\n",nconnbranch);
     double IbrD=0.0,IbrQ=0.0;
+    int thisbusnum = this->getOriginalIndex();
+
+    //    printf("Rank[%d]: Bus %d [%s] is connected to %d branches\n",p_rank,thisbusnum,this->isGhost()?"":"active",nconnbranch);
+
     for(i=0; i < nconnbranch; i++) {
       DSimBranch *branch = dynamic_cast<DSimBranch*>(branches[i].get());
       DSimBus *busf = dynamic_cast<DSimBus*>((branch->getBus1()).get());
       DSimBus *bust = dynamic_cast<DSimBus*>((branch->getBus2()).get());
       
-      if(this == busf) { 	  /* This bus is the from bus of branch[i] */
+      int busfnum = branch->getBus1OriginalIndex();
+      int bustnum = branch->getBus2OriginalIndex();
+
+      if(busfnum == thisbusnum) { 	  /* This bus is the from bus of branch[i] */
+	//	printf("\tRank [%d]: Bus %d [%s] connected to branch %d -- %d [%s]\n",p_rank,busfnum,busf->isGhost()? "":"active",busfnum,bustnum,branch->isGhost()? "":"active");
+
 	double VDf,VQf,VDt,VQt;
 	VDf = p_VD; VQf = p_VQ;
 	/* Get to bus voltages */
@@ -431,6 +440,8 @@ bool DSimBus::vectorValues(gridpack::ComplexType *values)
 	IbrD += Gff*VDf - Bff*VQf + Gft*VDt - Bft*VQt;
 	IbrQ += Bff*VDf + Gff*VQf + Bft*VDt + Gft*VQt;
       } else { 	/* This bus is the to bus of branch[i] */
+	//	printf("\tRank [%d]: Bus %d [%s] connected to branch %d -- %d [%s]\n",p_rank,bustnum,bust->isGhost()? "":"active",busfnum,bustnum,branch->isGhost()? "":"active");
+
 	double VDf,VQf,VDt,VQt;
 	VDt = p_VD; VQt = p_VQ;
 	/* Get from bus voltages */
@@ -505,24 +516,16 @@ void DSimBus::setMode(int mode)
 
 int DSimBus::getXCBufSize(void)
 {
-  return (2+2*p_nactivegen)*sizeof(double);
+  return 2*sizeof(double);
 }
 
 void DSimBus::setXCBuf(void *buf)
 {
-  double* ptr = static_cast<double*>(buf);
-  int i,ctr=2;
+  p_VDQptr = static_cast<double*>(buf);
   
-  ptr[0] = p_VD;
-  ptr[1] = p_VQ;
+  p_VDQptr[0] = p_VD;
+  p_VDQptr[1] = p_VQ;
 
-  for(i=0; i < p_ngen; i++) {
-    if(p_gstatus[i]) {
-      ptr[ctr]   = p_delta[i];
-      ptr[ctr+1] = p_dw[i];
-      ctr += 2;
-    }
-  }
 }
 /**
  * Set the internal values of the voltage magnitude and phase angle. Need this
@@ -535,6 +538,11 @@ void DSimBus::setValues(gridpack::ComplexType *values)
   if(p_mode == XVECTOBUS) { // Push values from X vector back onto the bus 
     p_VD = real(values[0]);
     p_VQ = real(values[1]);
+
+    // Also need to update the values held by the buffer used in exchanging ghost values
+    *p_VDQptr = p_VD;
+    *(p_VDQptr+1) = p_VQ;
+
     if(!p_isolated) {
       // Push the generator state variables from X onto the bus
       for(i=0; i < p_ngen; i++) {
@@ -734,9 +742,13 @@ bool DSimBranch::matrixForwardValues(gridpack::ComplexType *values)
   // Get from and to buses
   DSimBus *busf = dynamic_cast<DSimBus*>(getBus1().get());
   DSimBus *bust = dynamic_cast<DSimBus*>(getBus2().get());
+
+  if(busf->isGhost()) return false;
+
   // If either the from or to bus is isolated then there is no contribution to the matrix as there
   // is no flow on the branch
   if(busf->isIsolated() || bust->isIsolated()) return false;
+
   int nvarf,nvart;
   busf->getNvar(&nvarf);
   bust->getNvar(&nvart);
@@ -764,6 +776,8 @@ bool DSimBranch::matrixReverseValues(gridpack::ComplexType *values)
   // If either the from or to bus is isolated then there is no contribution to the matrix as there
   // is no flow on the branch
   if(busf->isIsolated() || bust->isIsolated()) return false;
+
+  if(bust->isGhost()) return false;
 
   int nvarf,nvart;
   busf->getNvar(&nvarf);
