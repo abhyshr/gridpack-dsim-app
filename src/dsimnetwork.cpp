@@ -32,6 +32,7 @@ DSimBus::DSimBus(void)
   p_isolated = false;
   p_mode = INIT_X;
   p_ws = 2*22.0/7.0*60.0;
+  p_VDQptr = NULL;
 }
 
 /**
@@ -75,8 +76,8 @@ bool DSimBus::isIsolated(void) const
  */
 void DSimBus::getVoltagesRectangular(double *VD,double *VQ) const
 {
-  *VD = p_VD;
-  *VQ = p_VQ;
+  *VD = *p_VDQptr;
+  *VQ = *(p_VDQptr+1);
 }
 
 
@@ -122,8 +123,12 @@ void DSimBus::load(const
   /* Convert from polar to rectangular */
   Va *= pi/180.0;
 
-  p_VD = Vm*cos(Va);
-  p_VQ = Vm*sin(Va);
+  double p_VD = Vm*cos(Va);
+  double p_VQ = Vm*sin(Va);
+  if(p_VDQptr) {
+    *p_VDQptr = p_VD;
+    *(p_VDQptr+1) = p_VQ;
+  }
 
   /* Save the voltage magnitude and angle so that we can use it later for building loads */
   p_Vm0 = Vm;
@@ -254,6 +259,9 @@ bool DSimBus::matrixDiagValues(gridpack::ComplexType *values)
   int VQ_idx=1; // Location of VQ in the solution vector for this bus
   int delta_idx; // Location of delta for geni in the soluton vector for this bus
   int dw_idx;   // Location of dw for geni in the solution vector for this bus
+  double p_VD,p_VQ;
+
+  getVoltagesRectangular(&p_VD,&p_VQ);
   
   // Zero out values first in case they haven't been zeroed out.
   for(i=0; i < nvar; i++) {
@@ -398,7 +406,9 @@ bool DSimBus::vectorValues(gridpack::ComplexType *values)
     int VQ_idx=1; // Location of VQ in the solution vector for this bus
     int delta_idx; // Location of delta for geni in the soluton vector for this bus
     int dw_idx;   // Location of dw for geni in the solution vector for this bus
-    
+    double p_VD,p_VQ;
+    getVoltagesRectangular(&p_VD,&p_VQ);
+
     if(p_isolated) {
       values[VD_idx] = p_VD - p_Vm0*cos(p_Va0); // f(VD)
       values[VQ_idx] = p_VQ - p_Vm0*sin(p_Va0); // f(VQ)
@@ -523,9 +533,6 @@ void DSimBus::setXCBuf(void *buf)
 {
   p_VDQptr = static_cast<double*>(buf);
   
-  p_VDQptr[0] = p_VD;
-  p_VDQptr[1] = p_VQ;
-
 }
 /**
  * Set the internal values of the voltage magnitude and phase angle. Need this
@@ -535,13 +542,11 @@ void DSimBus::setXCBuf(void *buf)
 void DSimBus::setValues(gridpack::ComplexType *values)
 {
   int i,ctr=2;
-  if(p_mode == XVECTOBUS) { // Push values from X vector back onto the bus 
-    p_VD = real(values[0]);
-    p_VQ = real(values[1]);
 
-    // Also need to update the values held by the buffer used in exchanging ghost values
-    *p_VDQptr = p_VD;
-    *(p_VDQptr+1) = p_VQ;
+  if(p_mode == XVECTOBUS) { // Push values from X vector back onto the bus 
+    *p_VDQptr = real(values[0]);
+    *(p_VDQptr+1) = real(values[1]);
+
 
     if(!p_isolated) {
       // Push the generator state variables from X onto the bus

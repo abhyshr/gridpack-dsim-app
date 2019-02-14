@@ -23,7 +23,7 @@
 #include <gridpack/utilities/complex.hpp>
 
 
-  enum DSMode{INIT_X,RESIDUAL_EVAL,XVECTOBUS,XDOTVECTOBUS,FAULT_EVAL};
+enum DSMode{INIT_X,RESIDUAL_EVAL,XVECTOBUS,XDOTVECTOBUS,FAULT_EVAL};
 
   class DSimBus: public gridpack::component::BaseBusComponent {
   public:
@@ -148,6 +148,7 @@
     bool isGhost(void) { return p_isghost; }
 
     void setRank(int rank) { p_rank = rank; }
+
   private:
     // Anything declared here should be set in the Archive class in exactly the same order!!
     // Data needed for calculations
@@ -172,7 +173,6 @@
     
     // Variables
     double *p_VDQptr; // Pointer used for exchanging values with ghost buses. Note that this pointer is pointed to the buffer used for exchanging values with ghost buses. Its contents should be updated whenever there is a change in V, e.g., when the values from vector X are being mapped to the buses.
-    double p_VD,p_VQ; // Real and imaginary part of bus voltage
     std::vector<double> p_delta,p_dw; // Machine angle and speed deviation */
     
     // xdot from PETSc
@@ -205,7 +205,6 @@
 	& p_D
 	& p_Pm
 	& p_Ep
-	& p_VD & p_VQ
 	& p_delta & p_dw
 	& p_deltadot & p_dwdot
 	& p_isghost
