@@ -71,7 +71,6 @@ void DSimFactory::initialize(void)
     DSimBus* dsimbus = dynamic_cast<DSimBus*>(p_network->getBus(i).get());
     dsimbus->setGhostStatus(!isactive);
     dsimbus->setRank(rank);
-    printf("Rank [%d]: Bus %d isactive = %d\n",rank,extbusnum,isactive);
   }
 
   for(i=0; i < numBranches; i++) {
@@ -81,11 +80,7 @@ void DSimFactory::initialize(void)
     DSimBranch* dsimbranch = dynamic_cast<DSimBranch*>(p_network->getBranch(i).get());
     dsimbranch->setGhostStatus(!isactive);
     dsimbranch->setRank(rank);
-    printf("Rank [%d]: Branch %d -- %d isactive = %d\n",rank,idxf,idxt,isactive);
-
   }
-
-  //  exit(1);
 }
 
 

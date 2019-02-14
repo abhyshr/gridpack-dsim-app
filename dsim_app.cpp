@@ -42,7 +42,6 @@ int main(int argc, char **argv)
   ierr = gridpack_initialize(&argc,&argv);
 
   DSim *dsim = new DSim();
-  printf("Hello World from rank %d\n", dsim->rank());
 
   dsim->setconfigurationfile("input.xml");
 

@@ -102,8 +102,6 @@ class DSim
     p_factory->setMode(RESIDUAL_EVAL);
     p_VecMapper->mapToVector(F);
     F.ready();
-    //    F.print();
-    //    exit(1);
   }
 
   // Build the residual for the nonlinear solver at tfaulton and tfaultoff

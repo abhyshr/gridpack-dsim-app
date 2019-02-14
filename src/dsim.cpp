@@ -5,7 +5,6 @@ DSim::DSim(void)
 {
   p_isSetUp = 0;
   p_network.reset(new DSimNetwork(p_comm));
-  printf("Created DSim\n");
 }
 
 DSim::DSim(gridpack::parallel::Communicator comm)
@@ -26,6 +25,7 @@ DSim::~DSim(void)
   delete(p_MatMapper);
   delete(p_daesolver);
   delete(p_nlsolver);
+  if(!rank()) printf("DSim: Finished running simulation\n");
 }
 
 void DSim::readnetworkdatafromconfig(void)
@@ -45,7 +45,7 @@ void DSim::readnetworkdatafromconfig(void)
   p_configcursor->get("generatorParameters",&dyrfilename);
   parser.parse(dyrfilename.c_str());
   p_profiler.stopdatareadtimer();
-  printf("Finished Reading data files %s and %s\n",netfilename.c_str(),dyrfilename.c_str());
+  if(!rank()) printf("DSim: Finished Reading data files %s and %s\n",netfilename.c_str(),dyrfilename.c_str());
 }
 
 void DSim::setup()
@@ -54,7 +54,7 @@ void DSim::setup()
   p_profiler.startsetuptimer();
   /* Partition network */
   p_network->partition();
-  printf("Finished partitioning network\n");
+  if(!rank()) printf("DSim:Finished partitioning network\n");
 
   /* Create factory */
   p_factory = new DSimFactory(p_network);
@@ -62,19 +62,14 @@ void DSim::setup()
   p_factory->load();
   /* Set up connectivity information */
   p_factory->setComponents();
-  printf("Finished setting up factory\n");
-
   /* Set up ghost/local status */
   p_factory->initialize();
-
-  //  p_J->print();
-
   // Set up bus data exchange buffers.
   p_factory->setExchange();
+  if(!rank()) printf("DSim:Finished setting up factory\n");
 
   // Create bus data exchange
   p_network->initBusUpdate();
-
 
   /* Create mappers and vectors, matrices */
   p_VecMapper = new gridpack::mapper::BusVectorMap<DSimNetwork>(p_network);
@@ -82,20 +77,10 @@ void DSim::setup()
 
   p_factory->setMode(INIT_X);
 
-
   p_X = p_VecMapper->mapToVector();
-  //  p_X->print();
-
-  
-  /*  p_factory->setMode(RESIDUAL_EVAL);
-
-  p_R = p_VecMapper->mapToVector();
-  p_R->zero();
-  */
-  //  p_VecMapper->mapToVector(p_R);
-  //  p_R->print();
-
   p_J = p_MatMapper->mapToMatrix();
+
+  if(!rank()) printf("DSim:Finished setting up mappers\n");
 
   // Set up solver
   int lsize = p_X->localSize();
@@ -113,10 +98,18 @@ void DSim::setup()
   p_nlsolver->configure(p_configcursor);
   p_daesolver->configure(p_configcursor);
 
+  if(!rank()) printf("DSim:Finished setting up DAE solver\n");
+
   p_isSetUp = 1;
   p_profiler.stopsetuptimer();
+  if(!rank()) printf("DSim:Set up completed\n");
 }
 
+/**
+  This routine needs to be updated
+  -- Remove the fault stuff and use events instead. Need functionality in
+     GridPACK for handling events.
+*/
 void DSim::solve()
 {
   // Get simulation time length
@@ -138,6 +131,7 @@ void DSim::solve()
   // Pre-fault time-stepping
   p_daesolver->initialize(0,0.01,*p_X);
   p_daesolver->solve(faultontime,maxsteps);
+  if(!rank()) printf("DSim:Finished pre-fault simulation\n");
 
   // Set fault
   printf("Applying a fault on bus %d at t = %3.2f\n",faultbus,faultontime);
@@ -149,6 +143,7 @@ void DSim::solve()
   maxsteps = 10000;
   p_daesolver->initialize(faultontime,0.01,*p_X);
   p_daesolver->solve(faultofftime,maxsteps);
+  if(!rank()) printf("DSim:Finished fault-on simulation\n");
 
   // Remove fault
   printf("Removing fault on bus %d at t = %3.2f\n",faultbus,faultontime);
@@ -160,4 +155,5 @@ void DSim::solve()
   maxsteps = 10000;
   p_daesolver->initialize(faultofftime,0.01,*p_X);
   p_daesolver->solve(tmax,maxsteps);
+  if(!rank()) printf("DSim:Finished post-fault simulation\n");
 }

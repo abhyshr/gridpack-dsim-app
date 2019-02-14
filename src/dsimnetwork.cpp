@@ -421,11 +421,8 @@ bool DSimBus::vectorValues(gridpack::ComplexType *values)
     gridpack::component::BaseBusComponent::getNeighborBranches(branches);
     // Number of branches connected to this
     int nconnbranch = branches.size();
-    //    printf("Nconnbranch = %d\n",nconnbranch);
     double IbrD=0.0,IbrQ=0.0;
     int thisbusnum = this->getOriginalIndex();
-
-    //    printf("Rank[%d]: Bus %d [%s] is connected to %d branches\n",p_rank,thisbusnum,this->isGhost()?"":"active",nconnbranch);
 
     for(i=0; i < nconnbranch; i++) {
       DSimBranch *branch = dynamic_cast<DSimBranch*>(branches[i].get());
@@ -436,8 +433,6 @@ bool DSimBus::vectorValues(gridpack::ComplexType *values)
       int bustnum = branch->getBus2OriginalIndex();
 
       if(busfnum == thisbusnum) { 	  /* This bus is the from bus of branch[i] */
-	//	printf("\tRank [%d]: Bus %d [%s] connected to branch %d -- %d [%s]\n",p_rank,busfnum,busf->isGhost()? "":"active",busfnum,bustnum,branch->isGhost()? "":"active");
-
 	double VDf,VQf,VDt,VQt;
 	VDf = p_VD; VQf = p_VQ;
 	/* Get to bus voltages */
@@ -450,8 +445,6 @@ bool DSimBus::vectorValues(gridpack::ComplexType *values)
 	IbrD += Gff*VDf - Bff*VQf + Gft*VDt - Bft*VQt;
 	IbrQ += Bff*VDf + Gff*VQf + Bft*VDt + Gft*VQt;
       } else { 	/* This bus is the to bus of branch[i] */
-	//	printf("\tRank [%d]: Bus %d [%s] connected to branch %d -- %d [%s]\n",p_rank,bustnum,bust->isGhost()? "":"active",busfnum,bustnum,branch->isGhost()? "":"active");
-
 	double VDf,VQf,VDt,VQt;
 	VDt = p_VD; VQt = p_VQ;
 	/* Get from bus voltages */
@@ -506,9 +499,6 @@ bool DSimBus::vectorValues(gridpack::ComplexType *values)
 
     values[VD_idx] = IgenQ - IshuntQ - IbrQ - IloadQ;
     values[VQ_idx] = IgenD - IshuntD - IbrD - IloadD;
-
-    //    printf("Bus %d:misQ = %4.3f  IgenQ = %4.3f  IshuntQ = %4.3f  IbrQ = %4.3f  IloadQ = %4.3f\n",getOriginalIndex(),real(values[VD_idx]),IgenQ,IshuntQ,IbrQ,IloadQ);
-    //    printf("Bus %d:misD = %4.3f  IgenD = %4.3f  IshuntD = %4.3f  IbrD = %4.3f  IloadD = %4.3f\n",getOriginalIndex(),real(values[VQ_idx]),IgenD,IshuntD,IbrD,IloadD);
 
   }
   return true;
