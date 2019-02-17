@@ -14,7 +14,7 @@ int gridpack_initialize(int* argcp, char ***argvp)
   MA_init(C_DBL, stack, heap);
 
   // Initialize math libraries
-  gridpack::math::Initialize();
+  gridpack::math::Initialize(argcp,argvp);
 
   return ierr;
 }
