@@ -25,6 +25,8 @@ add_executable(dsim.x
 	src/dsim.cpp
 	src/dsimnetwork.cpp
 	src/dsimfactory.cpp
+	src/base_gen_model.cpp
+	src/classical_gen_model.cpp
 )
 
 target_link_libraries(dsim.x ${GRIDPACK_LIBS})

@@ -21,6 +21,7 @@
 #include <boost/smart_ptr/shared_ptr.hpp>
 #include <gridpack/include/gridpack.hpp>
 #include <gridpack/utilities/complex.hpp>
+#include <base_gen_model.hpp>
 
 
 enum DSMode{INIT_X,RESIDUAL_EVAL,XVECTOBUS,XDOTVECTOBUS,FAULT_EVAL};
@@ -152,6 +153,8 @@ enum DSMode{INIT_X,RESIDUAL_EVAL,XVECTOBUS,XDOTVECTOBUS,FAULT_EVAL};
   private:
     // Anything declared here should be set in the Archive class in exactly the same order!!
     // Data needed for calculations
+    double p_sbase;   // System MVA base
+    int    p_bustype; // Bus type
     double p_gl,p_bl; // Shunt conductance and susceptance (p.u.)
     double p_pl,p_ql; // Active and reactive load (p.u)
     double p_Vm0,p_Va0;     // Voltage magnitude and angle at t=0 used for building constant impedance load
@@ -181,12 +184,17 @@ enum DSMode{INIT_X,RESIDUAL_EVAL,XVECTOBUS,XDOTVECTOBUS,FAULT_EVAL};
     bool   p_isghost; // Is it a local or ghosted element
 
     int    p_rank;
+
+    BaseGenModel **p_gen;
+
     friend class boost::serialization::access;
     
     template<class Archive>
     void serialize(Archive & ar, const unsigned int version)
     {
       ar & boost::serialization::base_object<gridpack::component::BaseBusComponent>(*this)
+	& p_sbase
+	& p_bustype
 	& p_gl & p_bl
 	& p_pl & p_ql
 	& p_Vm0 & p_Va0

@@ -43,7 +43,7 @@ void DSim::readnetworkdatafromconfig(void)
   p_configcursor->get("networkConfiguration",&netfilename);
   parser.parse(netfilename.c_str());
   p_configcursor->get("generatorParameters",&dyrfilename);
-  parser.parse(dyrfilename.c_str());
+  parser.externalParse(dyrfilename.c_str());
   p_profiler.stopdatareadtimer();
   if(!rank()) printf("DSim: Finished Reading data files %s and %s\n",netfilename.c_str(),dyrfilename.c_str());
 }
@@ -60,6 +60,7 @@ void DSim::setup()
   p_factory = new DSimFactory(p_network);
   /* Load data from Data Collection objects to Bus and Branch components */
   p_factory->load();
+
   /* Set up connectivity information */
   p_factory->setComponents();
   /* Set up ghost/local status */
@@ -75,10 +76,14 @@ void DSim::setup()
   p_VecMapper = new gridpack::mapper::BusVectorMap<DSimNetwork>(p_network);
   p_MatMapper = new gridpack::mapper::FullMatrixMap<DSimNetwork>(p_network);
 
-  p_factory->setMode(INIT_X);
+  //  p_factory->setMode(INIT_X);
 
   p_X = p_VecMapper->mapToVector();
   p_J = p_MatMapper->mapToMatrix();
+
+  p_X->print();
+
+  exit(1);
 
   if(!rank()) printf("DSim:Finished setting up mappers\n");
 

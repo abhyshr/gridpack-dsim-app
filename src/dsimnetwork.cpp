@@ -20,6 +20,8 @@
 #include <dsimnetwork.hpp>
 #include <gridpack/include/gridpack.hpp>
 #include <gridpack/utilities/complex.hpp>
+#include <constants.hpp>
+#include <classical_gen_model.hpp>
 
 /**
  *  Simple constructor
@@ -30,7 +32,7 @@ DSimBus::DSimBus(void)
   p_pl = p_ql = 0.0;
   p_ngen = p_nactivegen = 0;
   p_isolated = false;
-  p_mode = INIT_X;
+  p_mode = -1;
   p_ws = 2*22.0/7.0*60.0;
   p_VDQptr = NULL;
 }
@@ -40,6 +42,12 @@ DSimBus::DSimBus(void)
  */
 DSimBus::~DSimBus(void)
 {
+  if(p_ngen) {
+    for(int i=0; i < p_ngen; i++) {
+      if(p_gen[i]) free(p_gen[i]);
+    }
+  }
+  free(p_gen);
 }
 
 /**
@@ -94,27 +102,24 @@ void DSimBus::getVoltagesRectangular(double *VD,double *VQ) const
 void DSimBus::load(const
          boost::shared_ptr<gridpack::component::DataCollection> &data)
 {
-  double MVAbase; // Base MVA 
   double Vm, Va;  // Voltage magnitude and angle from the case file
-  double pi=22.0/7.0;
+  double pi=PI;
   int    i=0;
   double Pg, Qg,mbase,Rs,Xdp,H,D; // temp. variables to hold machine data
   int    gstatus;
   double delta,dw=0.0;
   double Pm,Ep;
   double IGD,IGQ; /* D and Q components of generator currents */
-  int    bustype; // Type of bus
 
-  MVAbase = 100.0;
+  p_sbase = DEFAULT_MVABASE; // Default MVA base
 
   // Get MVAbase
-  data->getValue(CASE_SBASE,&MVAbase);
+  data->getValue(CASE_SBASE,&p_sbase);
 
   // Get Voltage magnitude and angle
   data->getValue(BUS_VOLTAGE_ANG,&Va); // This is in degress
   data->getValue(BUS_VOLTAGE_MAG,&Vm);
-
-  // 
+ 
   /* Each bus has variables VD and VQ,
      In addition if active generators are incident on the bus
      then each generator has additional variables delta and dw
@@ -135,27 +140,43 @@ void DSimBus::load(const
   p_Va0 = Va;
 
   // Get the bus type
-  data->getValue(BUS_TYPE,&bustype);
-  if(bustype == 4) p_isolated = true;
+  data->getValue(BUS_TYPE,&p_bustype);
+  if(p_bustype == 4) p_isolated = true;
 
   if(p_isolated) return;
-
-  // Get active and reactive power load
-  data->getValue(LOAD_PL,&p_pl);
-  data->getValue(LOAD_QL,&p_ql);
-  // Convert to p.u.
-  p_pl /= MVAbase;
-  p_ql /= MVAbase;
-
+  
   // Read shunts
   data->getValue(BUS_SHUNT_GL,&p_gl);
   data->getValue(BUS_SHUNT_BL,&p_bl);
-  p_gl /= MVAbase;
-  p_bl /= MVAbase;
+  p_gl /= p_sbase;
+  p_bl /= p_sbase;
+  
 
+  gridpack::utility::StringUtils util;
+  
+  // Read Generators 
   // Get number of generators incident on this bus
   data->getValue(GENERATOR_NUMBER, &p_ngen);
   if(p_ngen) {
+    p_gen = (BaseGenModel**)malloc(p_ngen*sizeof(BaseGenModel*));
+
+    for(i=0; i < p_ngen; i++) {
+      p_gen[i] = NULL;
+      std::string model;
+      data->getValue(GENERATOR_MODEL,&model,i);
+
+      std::string type = util.trimQuotes(model);
+      util.toUpper(type);
+
+      printf("%s\n",type.c_str());
+
+      if(type == "GENCLS") {
+	ClassicalGen *clgen;
+	clgen = new ClassicalGen;
+	p_gen[i] = dynamic_cast<BaseGenModel*>(clgen);
+      }
+    }
+
     // Allocate containers
     p_gstatus.reserve(p_ngen);
     p_pg.reserve(p_ngen);   
@@ -174,11 +195,14 @@ void DSimBus::load(const
     
     // Read generator data stored in data collection objects
     for(i=0; i < p_ngen; i++) {
+      data->getValue(GENERATOR_STAT,&gstatus,i);
+
+
       // Generator real and reactive power
       data->getValue(GENERATOR_PG,&Pg,i);
       data->getValue(GENERATOR_QG,&Qg,i);
-      Pg /= MVAbase;
-      Qg /= MVAbase;
+      Pg /= p_sbase;
+      Qg /= p_sbase;
 
       // Generator parameters
       data->getValue(GENERATOR_STAT,&gstatus,i);
@@ -189,9 +213,9 @@ void DSimBus::load(const
       data->getValue(GENERATOR_DAMPING_COEFFICIENT_0,&D,i);
 
       // Convert generator parameters from machine base to MVA base
-      H *= mbase/MVAbase;
-      D *= mbase/MVAbase;
-      Xdp /= mbase/MVAbase;
+      H *= mbase/p_sbase;
+      D *= mbase/p_sbase;
+      Xdp /= mbase/p_sbase;
 
       p_pg.push_back(Pg);
       p_qg.push_back(Qg);
@@ -225,6 +249,14 @@ void DSimBus::load(const
       p_dwdot.push_back(0.0);
     }
   }
+
+  // Get active and reactive power load
+  data->getValue(LOAD_PL,&p_pl);
+  data->getValue(LOAD_QL,&p_ql);
+  // Convert to p.u.
+  p_pl /= p_sbase;
+  p_ql /= p_sbase;
+
 }
 
 /**
@@ -579,7 +611,7 @@ bool DSimBus::serialWrite(char *string,
 DSimBranch::DSimBranch(void)
 {
   p_nparlines = 0;
-  p_mode = INIT_X;
+  //  p_mode = INIT_X;
 }
 
 /**
