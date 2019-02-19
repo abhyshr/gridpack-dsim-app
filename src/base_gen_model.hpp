@@ -19,6 +19,10 @@
 
 #include "boost/smart_ptr/shared_ptr.hpp"
 #include "gridpack/component/base_component.hpp"
+#include <constants.hpp>
+
+// Same as DSMode in dsimnetwork.hpp
+//enum DSGenMode{INIT_X,RESIDUAL_EVAL,XVECTOBUS,XDOTVECTOBUS,FAULT_EVAL};
 
 class BaseGenModel
 {
@@ -46,8 +50,9 @@ class BaseGenModel
      * Initialize generator model before calculation
      * @param mag voltage magnitude
      * @param ang voltage angle
+     * @param [output] values - array where initialized generator variables should be set
      */
-    virtual void init(double mag, double ang);
+    virtual void init(double mag, double ang,gridpack::ComplexType *values);
 
     /**
      * Write output from generators to a string.
@@ -70,9 +75,27 @@ class BaseGenModel
     virtual void write(const char* signal, char* string);
 
     /**
-     * return the bolean indicating whether the gen is tripped by a relay
+     *  Set the number of variables for this generator model
+     *  @param [output] number of variables for this model
      */
-  bool getGenStatus() {}
+    virtual int getNvar();
+
+    /**
+     * Set the internal values of the voltage magnitude and phase angle. Need this
+     * function to push values from vectors back onto generators
+     * @param values array containing generator state variables
+     */
+    virtual void setValues(gridpack::ComplexType*);
+
+    /**
+     * return the bolean indicating whether the gen is ON or OFF
+     */
+    bool getGenStatus() {return status;}
+
+    /**
+     * set mode
+     */
+    void setMode(DSMode inmode) { mode = inmode; }
 
  protected:
   double        pg; /**< Generator active power output */
@@ -80,6 +103,8 @@ class BaseGenModel
   double        mbase; /**< MVA base of the machine */
   int           status; /**< Machine status */
   double        sbase;  /** The system MVA base */
+
+  DSMode        mode;  // Insert mode for the vector and matrix values
   bool          hasExciter;
   bool          hasGovernor;
 

@@ -23,4 +23,6 @@
 #define PI (4.0*atan(1.0))
 #define DEFAULT_MVABASE 100.0 // Default MVA base 100 MVA
 
+enum DSMode{INIT_X,RESIDUAL_EVAL,XVECTOBUS,XDOTVECTOBUS,FAULT_EVAL};
+
 #endif

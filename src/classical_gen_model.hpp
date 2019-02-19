@@ -19,8 +19,6 @@
 
 #include <base_gen_model.hpp>
 #include <gridpack/include/gridpack.hpp>
-#include "boost/smart_ptr/shared_ptr.hpp"
-#include "gridpack/component/base_component.hpp"
 
 
 class ClassicalGen: public BaseGenModel
@@ -49,8 +47,9 @@ class ClassicalGen: public BaseGenModel
      * Initialize generator model before calculation
      * @param mag voltage magnitude
      * @param ang voltage angle
+     * @param [output] values - array where initialized generator variables should be set
      */
-    void init(double mag, double ang);
+  void init(double mag, double ang,gridpack::ComplexType *values);
 
     /**
      * Write output from generators to a string.
@@ -72,6 +71,19 @@ class ClassicalGen: public BaseGenModel
      */
     void write(const char* signal, char* string);
 
+    /**
+     *  Set the number of variables for this generator model
+     *  @param [output] number of variables for this model
+     */
+    int getNvar();
+
+    /**
+     * Set the internal values of the voltage magnitude and phase angle. Need this
+     * function to push values from vectors back onto generators
+     * @param values array containing generator state variables
+     */
+     void setValues(gridpack::ComplexType*);
+
   private:
     // Machine parameters
     double p_Rs; // Machine stator resistance
@@ -83,6 +95,9 @@ class ClassicalGen: public BaseGenModel
     double p_Pm;  // Mechanical power input
     double p_Ep;  // Internal emf
 
+    // Generator variables and their derivatives
+    double p_delta,p_dw;
+    double p_deltadot,p_dwdot;
 
     friend class boost::serialization::access;
 

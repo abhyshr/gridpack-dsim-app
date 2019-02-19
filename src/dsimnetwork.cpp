@@ -47,6 +47,7 @@ DSimBus::~DSimBus(void)
       if(p_gen[i]) free(p_gen[i]);
     }
   }
+  free(p_neqsgen);
   free(p_gen);
 }
 
@@ -159,9 +160,11 @@ void DSimBus::load(const
   data->getValue(GENERATOR_NUMBER, &p_ngen);
   if(p_ngen) {
     p_gen = (BaseGenModel**)malloc(p_ngen*sizeof(BaseGenModel*));
+    p_neqsgen = (int*)malloc(p_ngen*sizeof(int));
 
     for(i=0; i < p_ngen; i++) {
       p_gen[i] = NULL;
+      p_neqsgen[i] = 0;
       std::string model;
       data->getValue(GENERATOR_MODEL,&model,i);
 
@@ -175,6 +178,7 @@ void DSimBus::load(const
 	clgen = new ClassicalGen;
 	p_gen[i] = dynamic_cast<BaseGenModel*>(clgen);
       }
+      p_gen[i]->load(data,i); // load data
     }
 
     // Allocate containers
@@ -401,9 +405,17 @@ bool DSimBus::matrixDiagValues(gridpack::ComplexType *values)
  */
 bool DSimBus::vectorSize(int *isize) const
 {
-  // [V_D, V_Q] + if(p_nactivegen) => [delta_i,dw] for each gen
-  *isize = 2 + 2*p_nactivegen;
+  int vsize = 2, gensize = 0,ngenvar;
+  int i;
+
+  for(i=0; i < p_ngen; i++) {
+    ngenvar = p_gen[i]->getNvar();
+    p_neqsgen[i] = ngenvar;
+    gensize += ngenvar;
+  }
+  *isize = vsize + gensize;
   return true;
+
 }
 
 /**
@@ -414,24 +426,30 @@ bool DSimBus::vectorSize(int *isize) const
  */
 bool DSimBus::vectorValues(gridpack::ComplexType *values)
 {
+  gridpack::ComplexType *genvalues = values;
   if(p_mode == INIT_X) { /* Values go in X */
     int i,ctr=0;
     if(p_isolated) {
       values[0] = p_Vm0*cos(p_Va0); // VD
       values[1] = p_Vm0*sin(p_Va0); // VQ
       return true;
-    } else {
-      values[ctr] = p_Vm0*cos(p_Va0); // VD
+    }
+    else {
+      values[ctr]   = p_Vm0*cos(p_Va0); // VD
       values[ctr+1] = p_Vm0*sin(p_Va0); // VQ
+
+      p_VDQptr[0] = real(values[0]);
+      p_VDQptr[1] = real(values[1]);
+
       ctr += 2;
+      genvalues = values+ctr;
       for(i=0; i < p_ngen; i++) {
-	if(p_gstatus[i]) {
-	  values[ctr] = p_delta[i];
-	  values[ctr+1] = p_dw[i];
-	  ctr += 2;
+	if(p_gen[i]->getGenStatus()) {
+	  p_gen[i]->init(p_Vm0,p_Va0,values+2);
 	}
+	genvalues += p_neqsgen[i];
       }
-    } 
+    }	  
   } else if(p_mode == RESIDUAL_EVAL || p_mode == FAULT_EVAL) { /* Values go in F */
     int i;
     int VD_idx=0; // Location of VD in the solution vector for this bus
@@ -564,12 +582,32 @@ void DSimBus::setXCBuf(void *buf)
 void DSimBus::setValues(gridpack::ComplexType *values)
 {
   int i,ctr=2;
+  gridpack::ComplexType *genvals;
+  DSMode mode;
 
+  if(p_isolated) return;
+
+  mode = p_mode == XVECTOBUS ? XVECTOBUS : XDOTVECTOBUS;
+
+  if(p_mode == XVECTOBUS) { // Push values from X vector back on the bus
+    *p_VDQptr = real(values[0]);
+    *(p_VDQptr+1) = real(values[1]);
+  }
+  
+  genvals = values + 2;
+  for(i=0; i < p_ngen; i++) {
+    if(p_gen[i]->getGenStatus()) {
+      p_gen[i]->setMode(mode);
+      p_gen[i]->setValues(genvals);
+    }
+    genvals += p_neqsgen[i];
+  }    
+  
   if(p_mode == XVECTOBUS) { // Push values from X vector back onto the bus 
     *p_VDQptr = real(values[0]);
     *(p_VDQptr+1) = real(values[1]);
-
-
+    
+    
     if(!p_isolated) {
       // Push the generator state variables from X onto the bus
       for(i=0; i < p_ngen; i++) {

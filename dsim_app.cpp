@@ -43,12 +43,19 @@ int main(int argc, char **argv)
 
   DSim *dsim = new DSim();
 
+  // Set the configuration file
   dsim->setconfigurationfile("input.xml");
 
+  // Read the data. File names given in config file.
   dsim->readnetworkdatafromconfig();
 
+  // Set up dynamic simulation
   dsim->setup();
 
+  // Initialize
+  dsim->initialize();
+
+  // Solve
   dsim->solve();
 
   delete(dsim);

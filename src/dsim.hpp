@@ -53,6 +53,8 @@ class DSim
 
   void setup(void);
 
+  void initialize(void);
+
   void solve(void);
 
   void readnetworkdatafromconfig();

@@ -81,10 +81,6 @@ void DSim::setup()
   p_X = p_VecMapper->mapToVector();
   p_J = p_MatMapper->mapToMatrix();
 
-  p_X->print();
-
-  exit(1);
-
   if(!rank()) printf("DSim:Finished setting up mappers\n");
 
   // Set up solver
@@ -108,6 +104,16 @@ void DSim::setup()
   p_isSetUp = 1;
   p_profiler.stopsetuptimer();
   if(!rank()) printf("DSim:Set up completed\n");
+}
+
+void DSim::initialize()
+{
+  p_factory->setMode(INIT_X);
+  p_VecMapper->mapToVector(p_X);
+  
+  p_network->updateBuses();
+  p_X->print();
+  exit(1);
 }
 
 /**

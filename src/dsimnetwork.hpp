@@ -21,10 +21,11 @@
 #include <boost/smart_ptr/shared_ptr.hpp>
 #include <gridpack/include/gridpack.hpp>
 #include <gridpack/utilities/complex.hpp>
+#include <constants.hpp>
 #include <base_gen_model.hpp>
 
 
-enum DSMode{INIT_X,RESIDUAL_EVAL,XVECTOBUS,XDOTVECTOBUS,FAULT_EVAL};
+
 
   class DSimBus: public gridpack::component::BaseBusComponent {
   public:
@@ -185,7 +186,8 @@ enum DSMode{INIT_X,RESIDUAL_EVAL,XVECTOBUS,XDOTVECTOBUS,FAULT_EVAL};
 
     int    p_rank;
 
-    BaseGenModel **p_gen;
+    BaseGenModel **p_gen;    // Generator model
+    int           *p_neqsgen; // Number of requations for each generator
 
     friend class boost::serialization::access;
     
