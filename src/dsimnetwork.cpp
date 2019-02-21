@@ -35,6 +35,8 @@ DSimBus::DSimBus(void)
   p_mode = NONE;
   p_VDQptr = NULL;
   p_nvar = 2;
+  p_neqsgen = NULL;
+  p_gen     = NULL;
 }
 
 /**
@@ -44,7 +46,7 @@ DSimBus::~DSimBus(void)
 {
   if(p_ngen) {
     for(int i=0; i < p_ngen; i++) {
-      if(p_gen[i]) free(p_gen[i]);
+      if(p_gen[i]) delete(p_gen[i]);
     }
   }
   free(p_neqsgen);
@@ -558,7 +560,7 @@ bool DSimBus::serialWrite(char *string,
 DSimBranch::DSimBranch(void)
 {
   p_nparlines = 0;
-  //  p_mode = INIT_X;
+  p_mode = NONE;
 }
 
 /**

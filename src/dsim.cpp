@@ -43,7 +43,7 @@ void DSim::readnetworkdatafromconfig(void)
   p_configcursor->get("networkConfiguration",&netfilename);
   parser.parse(netfilename.c_str());
   p_configcursor->get("generatorParameters",&dyrfilename);
-  parser.externalParse(dyrfilename.c_str());
+  parser.parse(dyrfilename.c_str());
   p_profiler.stopdatareadtimer();
   if(!rank()) printf("DSim: Finished Reading data files %s and %s\n",netfilename.c_str(),dyrfilename.c_str());
 }

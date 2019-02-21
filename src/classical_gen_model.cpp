@@ -4,6 +4,16 @@
 
 ClassicalGen::ClassicalGen(void)
 {
+  p_delta = 0.0;
+  p_dw    = 0.0;
+  p_deltadot = 0.0;
+  p_dwdot    = 0.0;
+  p_Rs    = 0.0;
+  p_H     = 0.0;
+  p_D     = 0.0;
+  p_Ep    = 0.0;
+  p_Pm    = 0.0;
+  p_Xdp   = 0.0;
 }
 
 ClassicalGen::~ClassicalGen(void)

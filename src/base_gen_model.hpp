@@ -141,22 +141,6 @@ class BaseGenModel
   bool          hasExciter;
   bool          hasGovernor;
   double        VD, VQ;
-
-  friend class boost::serialization::access;
-
-  template<class Archive>
-  void serialize(Archive & ar, const unsigned int version)
-  {
-        ar &
-          & pg
-          & qg
-          & mbase
-          & status
-          & sbase
-	  & mode
-          & hasExciter
-          & hasGovernor;
-  }
 };
 
 #endif

@@ -121,18 +121,6 @@ class ClassicalGen: public BaseGenModel
     // Generator variables and their derivatives
     double p_delta,p_dw;
     double p_deltadot,p_dwdot;
-
-    friend class boost::serialization::access;
-
-    template<class Archive>
-    void serialize(Archive & ar, const unsigned int version)
-    {
-      ar &
-	& p_Rs
-	& p_Xdp
-	& p_H
-	& p_D;
-     }
 };
 
 #endif

@@ -1,4 +1,4 @@
--dsim_ts_type rosw
+-dsim_ts_type cn
 -dsim_ts_atol 1e-2
 -dsim_ts_rtol 1e-2
 -dsim_ts_adapt_dt_max 0.08

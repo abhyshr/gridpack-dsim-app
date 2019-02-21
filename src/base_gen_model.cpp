@@ -3,6 +3,15 @@
 
 BaseGenModel::BaseGenModel(void)
 {
+  pg = 0.0;
+  qg = 0.0;
+  mbase = DEFAULT_MVABASE;
+  sbase = DEFAULT_MVABASE;
+  status = 0;
+  mode   = NONE;
+  shift  = 0.0;
+  VD     = 0.0;
+  VQ     = 0.0;
   hasExciter = hasGovernor = false;
 }
 
