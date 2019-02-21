@@ -32,9 +32,10 @@ DSimBus::DSimBus(void)
   p_pl = p_ql = 0.0;
   p_ngen = p_nactivegen = 0;
   p_isolated = false;
-  p_mode = -1;
-  p_ws = 2*22.0/7.0*60.0;
+  p_mode = NONE;
+  p_ws = OMEGA_S;
   p_VDQptr = NULL;
+  p_nvar = 2;
 }
 
 /**
@@ -56,7 +57,7 @@ DSimBus::~DSimBus(void)
 */
 void DSimBus::getNvar(int *nvar) const
 {
-  *nvar = 2 + 2*p_nactivegen;
+  *nvar = p_nvar;
 }
 
 /**
@@ -152,7 +153,6 @@ void DSimBus::load(const
   p_gl /= p_sbase;
   p_bl /= p_sbase;
   
-
   gridpack::utility::StringUtils util;
   
   // Read Generators 
@@ -171,14 +171,18 @@ void DSimBus::load(const
       std::string type = util.trimQuotes(model);
       util.toUpper(type);
 
-      printf("%s\n",type.c_str());
-
       if(type == "GENCLS") {
 	ClassicalGen *clgen;
 	clgen = new ClassicalGen;
 	p_gen[i] = dynamic_cast<BaseGenModel*>(clgen);
       }
       p_gen[i]->load(data,i); // load data
+      p_neqsgen[i] = p_gen[i]->getNvar();
+
+      /* Number of variables for this bus */
+      p_nvar += p_neqsgen[i];
+
+      //p_gen[i]->setBus(this);
     }
 
     // Allocate containers
@@ -271,7 +275,7 @@ void DSimBus::load(const
  */
 bool DSimBus::matrixDiagSize(int *isize, int *jsize) const
 {
-  *isize = 2+ 2*p_nactivegen;
+  *isize = p_nvar;
   *jsize = *isize;
 
   return true;
@@ -287,15 +291,13 @@ bool DSimBus::matrixDiagSize(int *isize, int *jsize) const
 bool DSimBus::matrixDiagValues(gridpack::ComplexType *values)
 {
   int i,j;
-  int nvar = 2 + 2*p_nactivegen;
+  int nvar = p_nvar;
   int VD_col_start = 0; // Starting col index for VD
   int VQ_col_start = nvar; // Starting col index for VQ
-  int delta_col_start, dw_col_start;
   int VD_idx=0; // Location of VD in the solution vector for this bus
   int VQ_idx=1; // Location of VQ in the solution vector for this bus
-  int delta_idx; // Location of delta for geni in the soluton vector for this bus
-  int dw_idx;   // Location of dw for geni in the solution vector for this bus
   double p_VD,p_VQ;
+  int ctr=0;
 
   getVoltagesRectangular(&p_VD,&p_VQ);
   
@@ -355,45 +357,66 @@ bool DSimBus::matrixDiagValues(gridpack::ComplexType *values)
  values[VQ_col_start + VD_idx] += -yp;
  values[VD_col_start + VQ_idx] += -yp;
  values[VQ_col_start + VQ_idx] += -yq;
- 
- // Partials of generator equations and contributions to the network<->generator
- int ctr=0;
- for(i=0; i < p_ngen; i++) {
-   if(p_gstatus[i]) {
-     delta_col_start = (2+ctr)*nvar;
-     dw_col_start    = (2+ctr+1)*nvar;
-     delta_idx       = 2 + 2*ctr;
-     dw_idx          = 2 + 2*ctr + 1;
-     
-     if(p_mode == FAULT_EVAL) {
-       values[delta_col_start+delta_idx] = 1.0;
-       values[dw_col_start+dw_idx]       = 1.0;
 
-       // Partials of generator current injections into the network w.r.t VD, VQ
-       values[VD_col_start + VD_idx] +=  1/p_Xdp[i];
-       values[VQ_col_start + VQ_idx] +=  -1/p_Xdp[i];
-     } else {
-     // Partials of generator equations w.r.t generator variables
-       values[delta_col_start+delta_idx] = -p_TSshift; 
-       values[dw_col_start+delta_idx]    = 1.0/p_ws;
-       values[delta_col_start+dw_idx]    = (-p_VD*p_Ep[i]*cos(p_delta[i])/p_Xdp[i] - p_VQ*p_Ep[i]*sin(p_delta[i])/p_Xdp[i])/(2*p_H[i]);
-       values[dw_col_start+dw_idx]       = -p_TSshift - p_D[i]/(2*p_H[i]);
-       
-       // Partials of generator equations w.r.t VD, VQ
-       values[VD_col_start+dw_idx] = (-p_Ep[i]*sin(p_delta[i])/p_Xdp[i])/(2*p_H[i]);
-       values[VQ_col_start+dw_idx] = (p_Ep[i]*cos(p_delta[i])/p_Xdp[i])/(2*p_H[i]);
-       
-       // Partials of generator current injections into the network w.r.t generator variables
-       values[delta_col_start + VD_idx] = p_Ep[i]*sin(p_delta[i])/p_Xdp[i];
-       values[delta_col_start + VQ_idx] = p_Ep[i]*cos(p_delta[i])/p_Xdp[i];
-       
-       // Partials of generator current injections into the network w.r.t VD, VQ
-       values[VD_col_start + VD_idx] +=  1/p_Xdp[i];
-       values[VQ_col_start + VQ_idx] +=  -1/p_Xdp[i];
+ // Partials of generator equations and contributions to the network<->generator
+ 
+ DSMode dsmode;
+ for(i=0; i < p_ngen; i++) {
+   if(p_gen[i]->getGenStatus()) {
+     p_gen[i]->setMode(p_mode);
+     p_gen[i]->setVoltage(p_VDQptr[0],p_VDQptr[1]);
+     p_gen[i]->setTSshift(p_TSshift);
+     gridpack::ComplexType genval[20];
+     int    nval=0,row[20],col[20];
+     // Derivatives of gen. eqs. w.r.t. state variables
+     p_gen[i]->matrixDiagEntries(&nval,row,col,genval);
+     
+     int var_col_start,eq_idx;
+     // Insert the entries in the values array
+     for(int k=0; k < nval; k++) {
+       var_col_start = (2+ctr+col[k])*p_nvar;
+       eq_idx        = 2 + ctr + row[k];
+       values[var_col_start + eq_idx] = genval[k];
      }
-     ctr += 2;
+
+     // Derivatives of generator currents w.r.t. VD, VQ
+     p_gen[i]->setMode(DIG_DV);
+     nval = 0;
+     p_gen[i]->matrixDiagEntries(&nval,row,col,genval);
+     // Insert the entries in the values array
+     for(int k=0; k < nval; k++) {
+       var_col_start = col[k]*p_nvar;
+       eq_idx        = row[k];
+       values[var_col_start + eq_idx] += genval[k];
+     }
+
+     if(p_mode != FAULT_EVAL) {
+       // Derivatives of generator equations w.r.t. VD, VQ
+       p_gen[i]->setMode(DFG_DV);
+       nval = 0;
+       p_gen[i]->matrixDiagEntries(&nval,row,col,genval);
+       // Insert the entries in the values array
+       for(int k=0; k < nval; k++) {
+	 var_col_start = col[k]*p_nvar;
+	 eq_idx        = 2 + ctr + row[k];
+	 values[var_col_start + eq_idx] = genval[k];
+       }
+
+       // Derivatives of generator currents w.r.t. generator variables
+       p_gen[i]->setMode(DIG_DX);
+       nval = 0;
+       p_gen[i]->matrixDiagEntries(&nval,row,col,genval);
+       // Insert the entries in the values array
+       for(int k=0; k < nval; k++) {
+	 var_col_start = (2+ctr+col[k])*p_nvar;
+	 eq_idx        = row[k];
+	 values[var_col_start + eq_idx] = genval[k];
+       }
+     }
    }
- }
+   ctr += p_neqsgen[i];
+ }  
+
  return true;
 }
 
@@ -405,15 +428,7 @@ bool DSimBus::matrixDiagValues(gridpack::ComplexType *values)
  */
 bool DSimBus::vectorSize(int *isize) const
 {
-  int vsize = 2, gensize = 0,ngenvar;
-  int i;
-
-  for(i=0; i < p_ngen; i++) {
-    ngenvar = p_gen[i]->getNvar();
-    p_neqsgen[i] = ngenvar;
-    gensize += ngenvar;
-  }
-  *isize = vsize + gensize;
+  *isize = p_nvar;
   return true;
 
 }
@@ -426,46 +441,44 @@ bool DSimBus::vectorSize(int *isize) const
  */
 bool DSimBus::vectorValues(gridpack::ComplexType *values)
 {
-  gridpack::ComplexType *genvalues = values;
+  gridpack::ComplexType *fbus = values;  // First two locations are for the bus current balance equations.
+  gridpack::ComplexType *fgen = values + 2;
   if(p_mode == INIT_X) { /* Values go in X */
-    int i,ctr=0;
+    int i;
     if(p_isolated) {
-      values[0] = p_Vm0*cos(p_Va0); // VD
-      values[1] = p_Vm0*sin(p_Va0); // VQ
+      fbus[0] = p_Vm0*cos(p_Va0); // VD
+      fbus[1] = p_Vm0*sin(p_Va0); // VQ
       return true;
     }
     else {
-      values[ctr]   = p_Vm0*cos(p_Va0); // VD
-      values[ctr+1] = p_Vm0*sin(p_Va0); // VQ
+      fbus[0]   = p_Vm0*cos(p_Va0); // VD
+      fbus[1] = p_Vm0*sin(p_Va0); // VQ
 
       p_VDQptr[0] = real(values[0]);
       p_VDQptr[1] = real(values[1]);
 
-      ctr += 2;
-      genvalues = values+ctr;
       for(i=0; i < p_ngen; i++) {
 	if(p_gen[i]->getGenStatus()) {
-	  p_gen[i]->init(p_Vm0,p_Va0,values+2);
+	  p_gen[i]->setVoltage(p_VDQptr[0],p_VDQptr[1]);
+	  p_gen[i]->init(fgen);
 	}
-	genvalues += p_neqsgen[i];
+	fgen += p_neqsgen[i];
       }
     }	  
   } else if(p_mode == RESIDUAL_EVAL || p_mode == FAULT_EVAL) { /* Values go in F */
     int i;
     int VD_idx=0; // Location of VD in the solution vector for this bus
     int VQ_idx=1; // Location of VQ in the solution vector for this bus
-    int delta_idx; // Location of delta for geni in the soluton vector for this bus
-    int dw_idx;   // Location of dw for geni in the solution vector for this bus
     double p_VD,p_VQ;
     getVoltagesRectangular(&p_VD,&p_VQ);
 
     if(p_isolated) {
-      values[VD_idx] = p_VD - p_Vm0*cos(p_Va0); // f(VD)
-      values[VQ_idx] = p_VQ - p_Vm0*sin(p_Va0); // f(VQ)
+      fbus[VD_idx] = p_VD - p_Vm0*cos(p_Va0); // f(VD)
+      fbus[VQ_idx] = p_VQ - p_Vm0*sin(p_Va0); // f(VQ)
       return true;
     }
       
-    values[VD_idx] = values[VQ_idx] = 0.0;
+    fbus[VD_idx] = fbus[VQ_idx] = 0.0;
     std::vector<boost::shared_ptr<BaseComponent> > branches;
     // Get the edges connected to this bus
     gridpack::component::BaseBusComponent::getNeighborBranches(branches);
@@ -527,28 +540,21 @@ bool DSimBus::vectorValues(gridpack::ComplexType *values)
     int ctr=0;
     double IgenD=0.0,IgenQ=0.0;
     for(i=0; i < p_ngen; i++) {
-      if(p_gstatus[i]) {
-	delta_idx       = 2 + 2*ctr;
-	dw_idx          = 2 + 2*ctr + 1;
+      double IGD=0.0, IGQ=0.0;
+      if(p_gen[i]->getGenStatus()) {
+	p_gen[i]->setMode(p_mode);
+	p_gen[i]->setVoltage(p_VDQptr[0],p_VDQptr[1]);
+	p_gen[i]->getCurrent(&IGD,&IGQ);
+	p_gen[i]->vectorValues(fgen);
 	
-	if(p_mode == FAULT_EVAL) {
-	  values[delta_idx] = values[dw_idx] = 0.0;
-	} else {
-	  // Generator equations
-	  values[delta_idx] = p_dw[i]/p_ws - p_deltadot[i];
-	  values[dw_idx]    = (p_Pm[i] - p_VD*p_Ep[i]*sin(p_delta[i])/p_Xdp[i] + p_VQ*p_Ep[i]*cos(p_delta[i])/p_Xdp[i] - p_D[i]*p_dw[i])/(2*p_H[i]) - p_dwdot[i];
-	}
-
-	// Generator current injections in the network
-	IgenD += (-p_VQ + p_Ep[i]*sin(p_delta[i]))/p_Xdp[i];
-	IgenQ += (p_VD - p_Ep[i]*cos(p_delta[i]))/p_Xdp[i];
-
-	ctr += 2;
+	IgenD += IGD;
+	IgenQ += IGQ;
       }
+      fgen += p_neqsgen[i];
     }
 
-    values[VD_idx] = IgenQ - IshuntQ - IbrQ - IloadQ;
-    values[VQ_idx] = IgenD - IshuntD - IbrD - IloadD;
+    fbus[VD_idx] = IgenQ - IshuntQ - IbrQ - IloadQ;
+    fbus[VQ_idx] = IgenD - IshuntD - IbrD - IloadD;
 
   }
   return true;
@@ -561,7 +567,7 @@ bool DSimBus::vectorValues(gridpack::ComplexType *values)
  */
 void DSimBus::setMode(int mode)
 {
-  p_mode = mode;
+  p_mode = (DSMode)mode;
 }
 
 int DSimBus::getXCBufSize(void)
@@ -574,6 +580,7 @@ void DSimBus::setXCBuf(void *buf)
   p_VDQptr = static_cast<double*>(buf);
   
 }
+
 /**
  * Set the internal values of the voltage magnitude and phase angle. Need this
  * function to push values from vectors back onto buses 
@@ -598,36 +605,11 @@ void DSimBus::setValues(gridpack::ComplexType *values)
   for(i=0; i < p_ngen; i++) {
     if(p_gen[i]->getGenStatus()) {
       p_gen[i]->setMode(mode);
+      p_gen[i]->setVoltage(p_VDQptr[0],p_VDQptr[1]);
       p_gen[i]->setValues(genvals);
     }
     genvals += p_neqsgen[i];
   }    
-  
-  if(p_mode == XVECTOBUS) { // Push values from X vector back onto the bus 
-    *p_VDQptr = real(values[0]);
-    *(p_VDQptr+1) = real(values[1]);
-    
-    
-    if(!p_isolated) {
-      // Push the generator state variables from X onto the bus
-      for(i=0; i < p_ngen; i++) {
-	if(p_gstatus[i]) {
-	  p_delta[i] = real(values[ctr]);
-	  p_dw[i]    = real(values[ctr+1]);
-	  ctr += 2;
-	}
-      }
-    }
-  } else if(p_mode == XDOTVECTOBUS) { // Push the derivatives of delta and dw onto the bus
-    if(p_isolated) return;
-    for(i=0; i < p_ngen; i++) {
-      if(p_gstatus[i]) {
-	p_deltadot[i] = real(values[ctr]);
-	p_dwdot[i]    = real(values[ctr+1]);
-	ctr += 2;
-      }
-    }
-  }
 }
 
 /**
@@ -676,7 +658,7 @@ void DSimBranch::load(
   double R,X,Bc,G,B,Zm,tap2,tapr,tapi;
   double Gff,Bff,Gft,Bft,Gtf,Btf,Gtt,Btt;
   int    status,i;
-  double pi=22.0/7.0;
+  double pi=PI;
   std::string cktid;
 
   // Get the number of parallel lines

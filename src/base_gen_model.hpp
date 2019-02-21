@@ -48,11 +48,9 @@ class BaseGenModel
 
     /**
      * Initialize generator model before calculation
-     * @param mag voltage magnitude
-     * @param ang voltage angle
      * @param [output] values - array where initialized generator variables should be set
      */
-    virtual void init(double mag, double ang,gridpack::ComplexType *values);
+    virtual void init(gridpack::ComplexType *values);
 
     /**
      * Write output from generators to a string.
@@ -88,6 +86,14 @@ class BaseGenModel
     virtual void setValues(gridpack::ComplexType*);
 
     /**
+     * Return the values of the generator vector block
+     * @param values: pointer to vector values
+     * @return: false if generator does not contribute
+     *        vector element
+     */
+    virtual bool vectorValues(gridpack::ComplexType *values);
+
+    /**
      * return the bolean indicating whether the gen is ON or OFF
      */
     bool getGenStatus() {return status;}
@@ -97,16 +103,44 @@ class BaseGenModel
      */
     void setMode(DSMode inmode) { mode = inmode; }
 
+    /**
+     * Set bus voltage
+     */
+    void setVoltage(double busVD, double busVQ) {VD = busVD; VQ = busVQ; }
+
+    /**
+     * Set TSshift: This parameter is passed by PETSc and is to be used in the Jacobian calculation only.
+     */
+    void setTSshift(double inshift) {shift = inshift;}
+
+    /**
+     * Return the generator current injection (in rectangular form) 
+     * @param [output] IGD - real part of the generator current
+     * @param [output] IGQ - imaginary part of the generator current
+     */
+    virtual void getCurrent(double *IGD, double *IGQ);
+
+    /**
+     * Return the matrix entries
+     * @param [output] nval - number of values set
+     * @param [output] row - row indices for matrix entries
+     * @param [output] col - col indices for matrix entries
+     * @param [output] values - matrix entries
+     * return true when matrix entries set
+     */
+    virtual bool matrixDiagEntries(int *nval,int *row, int *col, gridpack::ComplexType *values);
+
  protected:
   double        pg; /**< Generator active power output */
   double        qg; /**< Generator reactive power output */
   double        mbase; /**< MVA base of the machine */
   int           status; /**< Machine status */
   double        sbase;  /** The system MVA base */
-
   DSMode        mode;  // Insert mode for the vector and matrix values
+  double        shift; // shift (multiplier) used in the Jacobian calculation.
   bool          hasExciter;
   bool          hasGovernor;
+  double        VD, VQ;
 
   friend class boost::serialization::access;
 
@@ -119,6 +153,7 @@ class BaseGenModel
           & mbase
           & status
           & sbase
+	  & mode
           & hasExciter
           & hasGovernor;
   }

@@ -32,11 +32,9 @@ void BaseGenModel::load(boost::shared_ptr<gridpack::component::DataCollection>
 
 /**
  * Initialize generator model before calculation
- * @param mag voltage magnitude
- * @param ang voltage angle
  * @param [output] values - array where initialized generator variables should be set
  */
-void BaseGenModel::init(double mag, double ang,gridpack::ComplexType *values)
+void BaseGenModel::init(gridpack::ComplexType *values)
 {
 }
 
@@ -83,4 +81,40 @@ void BaseGenModel::write(const char* signal, char* string)
 */
 void BaseGenModel::setValues(gridpack::ComplexType *values)
 {
+}
+
+/**
+ * Return the values of the generator vector block
+ * @param values: pointer to vector values
+ * @return: false if generator does not contribute
+ *        vector element
+ */
+bool BaseGenModel::vectorValues(gridpack::ComplexType *values)
+{
+  return false;
+}
+
+/**
+ * Return the generator current injection (in rectangular form) 
+ * @param [output] IGD - real part of the generator current
+ * @param [output] IGQ - imaginary part of the generator current
+*/
+void BaseGenModel::getCurrent(double *IGD, double *IGQ)
+{
+  *IGD = *IGQ = 0.0;
+}
+
+
+/**
+ * Return the matrix entries
+ * @param [output] nval - number of values set
+ * @param [output] row - row indices for matrix entries
+ * @param [output] col - col indices for matrix entries
+ * @param [output] values - matrix entries
+ * return true when matrix entries set
+ */
+bool BaseGenModel::matrixDiagEntries(int *nval,int *row, int *col, gridpack::ComplexType *values)
+{
+  *nval = 0;
+  return false;
 }

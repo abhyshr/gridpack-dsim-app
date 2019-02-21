@@ -5,7 +5,7 @@
  */
 // -------------------------------------------------------------
 /**
- * @file   dsimutils.hpp
+ * @file   dsim.hpp
  * @author Shrirang Abhyankar
  * @date   Feb 06, 2019
  *
@@ -81,7 +81,6 @@ class DSim
     J.zero();
     p_factory->setMode(RESIDUAL_EVAL);
     p_MatMapper->mapToMatrix(J);
-    //    J.print();
   }
 
   /// Build the DAE RHS function
@@ -104,6 +103,7 @@ class DSim
     p_factory->setMode(RESIDUAL_EVAL);
     p_VecMapper->mapToVector(F);
     F.ready();
+    //    F.print();
   }
 
   // Build the residual for the nonlinear solver at tfaulton and tfaultoff

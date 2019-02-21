@@ -45,11 +45,9 @@ class ClassicalGen: public BaseGenModel
 
     /**
      * Initialize generator model before calculation
-     * @param mag voltage magnitude
-     * @param ang voltage angle
      * @param [output] values - array where initialized generator variables should be set
      */
-  void init(double mag, double ang,gridpack::ComplexType *values);
+  void init(gridpack::ComplexType *values);
 
     /**
      * Write output from generators to a string.
@@ -83,6 +81,31 @@ class ClassicalGen: public BaseGenModel
      * @param values array containing generator state variables
      */
      void setValues(gridpack::ComplexType*);
+
+    /**
+     * Return the values of the generator vector block
+     * @param values: pointer to vector values
+     * @return: false if generator does not contribute
+     *        vector element
+     */
+    bool vectorValues(gridpack::ComplexType *values);
+
+    /**
+     * Return the generator current injection (in rectangular form) 
+     * @param [output] IGD - real part of the generator current
+     * @param [output] IGQ - imaginary part of the generator current
+     */
+    void getCurrent(double *IGD, double *IGQ);
+
+    /**
+     * Return the matrix entries
+     * @param [output] nval - number of values set
+     * @param [output] row - row indices for matrix entries
+     * @param [output] col - col indices for matrix entries
+     * @param [output] values - matrix entries
+     * return true when matrix entries set
+     */
+    bool matrixDiagEntries(int *nval,int *row, int *col, gridpack::ComplexType *values);
 
   private:
     // Machine parameters

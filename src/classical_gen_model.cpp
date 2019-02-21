@@ -1,5 +1,6 @@
 #include <classical_gen_model.hpp>
 #include <gridpack/include/gridpack.hpp>
+#include <constants.hpp>
 
 ClassicalGen::ClassicalGen(void)
 {
@@ -34,22 +35,19 @@ void ClassicalGen::load(boost::shared_ptr<gridpack::component::DataCollection> d
 
 /**
  * Initialize generator model before calculation
- * @param mag voltage magnitude
- * @param ang voltage angle
  * @param [output] values - array where initialized generator variables should be set
  */
-void ClassicalGen::init(double Vm, double Va,gridpack::ComplexType* values)
+void ClassicalGen::init(gridpack::ComplexType* values)
 {
-  double VD, VQ; // Bus voltage in cartesian coordinates
   double IGD,IGQ; // Machine currents in cartesian coordinates
   double Pg, Qg;  // Generator real and reactive power
   double delta,dw=0.0;  // Initial machine speed deviation
+  double Vm;
 
   Pg = pg/sbase;
   Qg = qg/sbase;
 
-  VD = Vm*cos(Va);
-  VQ = Vm*sin(Va);
+  Vm = sqrt(VD*VD + VQ*VQ);
 
   IGD = (VD*Pg + VQ*Qg)/(Vm*Vm);
   IGQ = (VQ*Pg - VD*Qg)/(Vm*Vm);
@@ -113,3 +111,102 @@ void ClassicalGen::setValues(gridpack::ComplexType *values)
     p_dwdot    = real(values[1]);
   }
 }
+
+/**
+ * Return the values of the generator vector block
+ * @param values: pointer to vector values
+ * @return: false if generator does not contribute
+ *        vector element
+ */
+bool ClassicalGen::vectorValues(gridpack::ComplexType *values)
+{
+  int delta_idx = 0, dw_idx = 1;
+  if(mode == FAULT_EVAL) {
+    values[delta_idx] = values[dw_idx] = 0.0;
+  } else if(mode == RESIDUAL_EVAL) {
+    // Generator equations
+    values[delta_idx] = p_dw/OMEGA_S - p_deltadot;
+    values[dw_idx]    = (p_Pm - VD*p_Ep*sin(p_delta)/p_Xdp + VQ*p_Ep*cos(p_delta)/p_Xdp - p_D*p_dw)/(2*p_H) - p_dwdot;
+  }
+  
+  return true;
+}
+
+/**
+ * Return the generator current injection (in rectangular form) 
+ * @param [output] IGD - real part of the generator current
+ * @param [output] IGQ - imaginary part of the generator current
+*/
+void ClassicalGen::getCurrent(double *IGD, double *IGQ)
+{
+  // Generator current injections in the network
+  *IGD += (-VQ + p_Ep*sin(p_delta))/p_Xdp;
+  *IGQ += ( VD - p_Ep*cos(p_delta))/p_Xdp;
+}
+
+/**
+ * Return the matrix entries
+ * @param [output] nval - number of values set
+ * @param [output] row - row indices for matrix entries
+ * @param [output] col - col indices for matrix entries
+ * @param [output] values - matrix entries
+ * return true when matrix entries set
+ */
+bool ClassicalGen::matrixDiagEntries(int *nval,int *row, int *col, gridpack::ComplexType *values)
+{
+  int idx = 0;
+  if(mode == FAULT_EVAL) {
+    row[idx] = 0; col[idx] = 0;
+    values[idx] = 1.0;
+    idx++;
+    row[idx] = 1; col[idx] = 1;
+    values[idx] = 1.0;
+    idx++;
+    *nval = idx;
+  } else if(mode == DIG_DV) {
+    row[idx] = 0; col[idx] = 0;
+    values[idx] =  1/p_Xdp;
+    idx++;
+    row[idx] = 1; col[idx] = 1;
+    values[idx] =  -1/p_Xdp;
+    idx++;
+
+    *nval = idx;
+  } else if(mode == DFG_DV) {
+    row[idx] = 1; col[idx] = 0;
+    values[idx] = (-p_Ep*sin(p_delta)/p_Xdp)/(2*p_H);
+    idx++;
+    row[idx] = 1; col[idx] = 1;
+    values[idx] = (p_Ep*cos(p_delta)/p_Xdp)/(2*p_H);
+    idx++;
+
+    *nval = idx;
+  } else if(mode == DIG_DX) {
+    row[idx] = 0; col[idx] = 0;
+    values[idx] = p_Ep*sin(p_delta)/p_Xdp;
+    idx++;
+    row[idx] = 1; col[idx] = 0;
+    values[idx] = p_Ep*cos(p_delta)/p_Xdp;
+    idx++;
+
+    *nval = idx;
+  } else {
+    // Partials of generator equations w.r.t generator variables
+    row[idx] = 0; col[idx] = 0;
+    values[idx] = -shift;
+    idx++;
+    row[idx] = 0; col[idx] = 1;
+    values[idx]    = 1.0/OMEGA_S;
+    idx++;
+    row[idx] = 1; col[idx] = 0;
+    values[idx] = (-VD*p_Ep*cos(p_delta)/p_Xdp - VQ*p_Ep*sin(p_delta)/p_Xdp)/(2*p_H);
+    idx++;
+    row[idx] = col[idx] = 1;
+    values[idx] = -shift - p_D/(2*p_H);
+    idx++;
+    
+    *nval = idx;
+  }
+  return true;
+}
+

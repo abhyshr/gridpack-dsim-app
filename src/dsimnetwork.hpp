@@ -24,9 +24,6 @@
 #include <constants.hpp>
 #include <base_gen_model.hpp>
 
-
-
-
   class DSimBus: public gridpack::component::BaseBusComponent {
   public:
     /**
@@ -162,8 +159,9 @@
     int    p_ngen;    // Number of generators incident on this bus
     int    p_nactivegen; // Number of active generators (status=1) on this bus
     bool   p_isolated;   // flag for isolated bus
-    int    p_mode; // factory mode
+    DSMode p_mode; // factory mode
     double p_TSshift;  // shift value provided by TSIJacobian. 
+    int    p_nvar;      // Number of variables for this bus
     double p_ws;   // synchronous speed
     std::vector<int> p_gstatus; // Generator status
     std::vector<double> p_pg, p_qg; // Real and reactive generator output
@@ -205,6 +203,7 @@
 	& p_isolated
 	& p_mode
 	& p_TSshift
+	& p_nvar
 	& p_ws
 	& p_gstatus
 	& p_pg & p_qg
