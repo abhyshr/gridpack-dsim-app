@@ -33,7 +33,6 @@ DSimBus::DSimBus(void)
   p_ngen = p_nactivegen = 0;
   p_isolated = false;
   p_mode = NONE;
-  p_ws = OMEGA_S;
   p_VDQptr = NULL;
   p_nvar = 2;
 }
@@ -122,11 +121,6 @@ void DSimBus::load(const
   data->getValue(BUS_VOLTAGE_ANG,&Va); // This is in degress
   data->getValue(BUS_VOLTAGE_MAG,&Vm);
  
-  /* Each bus has variables VD and VQ,
-     In addition if active generators are incident on the bus
-     then each generator has additional variables delta and dw
-     Note that all generators are modeled as GENCLS
-  */
   /* Convert from polar to rectangular */
   Va *= pi/180.0;
 
@@ -176,85 +170,18 @@ void DSimBus::load(const
 	clgen = new ClassicalGen;
 	p_gen[i] = dynamic_cast<BaseGenModel*>(clgen);
       }
+
+
+      // Read generator data stored in data collection objects
       p_gen[i]->load(data,i); // load data
+
+      // Set number of equations for this generator
       p_neqsgen[i] = p_gen[i]->getNvar();
 
-      /* Number of variables for this bus */
+      /* Updae number of variables for this bus */
       p_nvar += p_neqsgen[i];
 
       //p_gen[i]->setBus(this);
-    }
-
-    // Allocate containers
-    p_gstatus.reserve(p_ngen);
-    p_pg.reserve(p_ngen);   
-    p_qg.reserve(p_ngen);
-    p_mbase.reserve(p_ngen);
-    p_Rs.reserve(p_ngen);
-    p_Xdp.reserve(p_ngen);
-    p_H.reserve(p_ngen);
-    p_D.reserve(p_ngen);
-    p_Pm.reserve(p_ngen);
-    p_Ep.reserve(p_ngen);
-    p_delta.reserve(p_ngen);
-    p_dw.reserve(p_ngen);
-    p_deltadot.reserve(p_ngen);
-    p_dwdot.reserve(p_ngen);
-    
-    // Read generator data stored in data collection objects
-    for(i=0; i < p_ngen; i++) {
-      data->getValue(GENERATOR_STAT,&gstatus,i);
-
-
-      // Generator real and reactive power
-      data->getValue(GENERATOR_PG,&Pg,i);
-      data->getValue(GENERATOR_QG,&Qg,i);
-      Pg /= p_sbase;
-      Qg /= p_sbase;
-
-      // Generator parameters
-      data->getValue(GENERATOR_STAT,&gstatus,i);
-      data->getValue(GENERATOR_MBASE,&mbase,i);
-      data->getValue(GENERATOR_RESISTANCE,&Rs,i);
-      data->getValue(GENERATOR_TRANSIENT_REACTANCE,&Xdp,i);
-      data->getValue(GENERATOR_INERTIA_CONSTANT_H,&H,i);
-      data->getValue(GENERATOR_DAMPING_COEFFICIENT_0,&D,i);
-
-      // Convert generator parameters from machine base to MVA base
-      H *= mbase/p_sbase;
-      D *= mbase/p_sbase;
-      Xdp /= mbase/p_sbase;
-
-      p_pg.push_back(Pg);
-      p_qg.push_back(Qg);
-      p_gstatus.push_back(gstatus);
-      p_mbase.push_back(mbase);
-      p_Rs.push_back(Rs);
-      p_Xdp.push_back(Xdp);
-      p_H.push_back(H);
-      p_D.push_back(D);
-
-      // Initialize the generator dynamic variables delta and dw and controller constants
-      if(gstatus) {
-	p_nactivegen++; // Increment the number of active generators
-	IGD = (p_VD*Pg + p_VQ*Qg)/(Vm*Vm);
-	IGQ = (p_VQ*Pg - p_VD*Qg)/(Vm*Vm);
-
-	delta = atan2(p_VQ + Xdp*IGD,p_VD-Xdp*IGQ);
-	p_delta.push_back(delta);
-	p_dw.push_back(dw);
-	
-	Ep = sqrt(pow((p_VD - Xdp*IGQ),2) + pow((p_VQ + Xdp*IGD),2));
-	p_Ep.push_back(Ep);
-	p_Pm.push_back(Pg);
-      } else {
-	p_delta.push_back(0.0);
-	p_dw.push_back(0.0);
-	p_Pm.push_back(0.0);
-	p_Ep.push_back(0.0);
-      }
-      p_deltadot.push_back(0.0);
-      p_dwdot.push_back(0.0);
     }
   }
 

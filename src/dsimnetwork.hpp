@@ -162,23 +162,9 @@
     DSMode p_mode; // factory mode
     double p_TSshift;  // shift value provided by TSIJacobian. 
     int    p_nvar;      // Number of variables for this bus
-    double p_ws;   // synchronous speed
-    std::vector<int> p_gstatus; // Generator status
-    std::vector<double> p_pg, p_qg; // Real and reactive generator output
-    std::vector<double> p_mbase; // Generator machine base
-    std::vector<double> p_Rs;     // Machine stator resistance (converted to MVAbase)
-    std::vector<double> p_Xdp;   // Machine transient reactance (converted to MVAbase)
-    std::vector<double> p_H;     // Machine Inertia constant (converted to MVAbase)
-    std::vector<double> p_D;     // Machine damping coeffient (converted to MVAbase)
-    std::vector<double> p_Pm;    // Mechanical power input
-    std::vector<double> p_Ep;    // Machine internal emf
     
     // Variables
     double *p_VDQptr; // Pointer used for exchanging values with ghost buses. Note that this pointer is pointed to the buffer used for exchanging values with ghost buses. Its contents should be updated whenever there is a change in V, e.g., when the values from vector X are being mapped to the buses.
-    std::vector<double> p_delta,p_dw; // Machine angle and speed deviation */
-    
-    // xdot from PETSc
-    std::vector<double> p_deltadot,p_dwdot;
 
     bool   p_isghost; // Is it a local or ghosted element
 
@@ -204,18 +190,6 @@
 	& p_mode
 	& p_TSshift
 	& p_nvar
-	& p_ws
-	& p_gstatus
-	& p_pg & p_qg
-	& p_mbase
-	& p_Rs
-	& p_Xdp
-	& p_H
-	& p_D
-	& p_Pm
-	& p_Ep
-	& p_delta & p_dw
-	& p_deltadot & p_dwdot
 	& p_isghost
 	& p_rank;
     }  
