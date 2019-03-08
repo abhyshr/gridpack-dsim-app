@@ -73,7 +73,7 @@ class ClassicalGen: public BaseGenModel
      *  Set the number of variables for this generator model
      *  @param [output] number of variables for this model
      */
-    int getNvar();
+    int vectorSize();
 
     /**
      * Set the internal values of the voltage magnitude and phase angle. Need this

@@ -76,7 +76,7 @@ class BaseGenModel
      *  Set the number of variables for this generator model
      *  @param [output] number of variables for this model
      */
-    virtual int getNvar();
+    virtual int vectorSize();
 
     /**
      * Set the internal values of the voltage magnitude and phase angle. Need this

@@ -100,7 +100,7 @@ void ClassicalGen::write(const char* signal, char* string)
  *  Set the number of variables for this generator model
  *  @param [output] number of variables for this model
  */
-int ClassicalGen::getNvar()
+int ClassicalGen::vectorSize()
 {
   int nvar = 2;
   return nvar;

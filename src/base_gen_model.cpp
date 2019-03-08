@@ -68,7 +68,7 @@ double BaseGenModel::getAngle()
  *  Set the number of variables for this generator model
  *  @param [output] number of variables for this model
  */
-int BaseGenModel::getNvar()
+int BaseGenModel::vectorSize()
 {
   int nvar = 0;
   return nvar;
