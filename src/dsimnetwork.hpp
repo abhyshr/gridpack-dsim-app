@@ -10,7 +10,7 @@
  * @date   02/09/19
  * 
  * @brief  
- * Network component defitions
+ * Network component definitions
  * 
  */
 // -------------------------------------------------------------

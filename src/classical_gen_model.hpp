@@ -40,7 +40,7 @@ class ClassicalGen: public BaseGenModel
      * @param index of generator on bus
      * TODO: might want to move this functionality to BaseGeneratorModel
      */
-    void load(boost::shared_ptr<gridpack::component::DataCollection>
+    void load(const boost::shared_ptr<gridpack::component::DataCollection>
         data, int idx);
 
     /**
@@ -73,7 +73,7 @@ class ClassicalGen: public BaseGenModel
      *  Set the number of variables for this generator model
      *  @param [output] number of variables for this model
      */
-    int vectorSize();
+    bool vectorSize(int *nvar) const;
 
     /**
      * Set the internal values of the voltage magnitude and phase angle. Need this

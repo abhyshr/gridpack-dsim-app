@@ -8,7 +8,6 @@ BaseGenModel::BaseGenModel(void)
   mbase = DEFAULT_MVABASE;
   sbase = DEFAULT_MVABASE;
   status = 0;
-  mode   = NONE;
   shift  = 0.0;
   VD     = 0.0;
   VQ     = 0.0;
@@ -25,7 +24,7 @@ BaseGenModel::~BaseGenModel(void)
  * @param index of generator on bus
  * TODO: might want to move this functionality to BaseGeneratorModel
  */
-void BaseGenModel::load(boost::shared_ptr<gridpack::component::DataCollection>
+void BaseGenModel::load(const boost::shared_ptr<gridpack::component::DataCollection>
         data, int idx)
 {
   data->getValue(GENERATOR_STAT,&status,idx); // Generator status
@@ -68,10 +67,10 @@ double BaseGenModel::getAngle()
  *  Set the number of variables for this generator model
  *  @param [output] number of variables for this model
  */
-int BaseGenModel::vectorSize()
+bool BaseGenModel::vectorSize(int *nvar) const
 {
-  int nvar = 0;
-  return nvar;
+  *nvar = 0;
+  return true;
 }
 
 /**

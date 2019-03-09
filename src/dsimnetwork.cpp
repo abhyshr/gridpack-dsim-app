@@ -170,7 +170,7 @@ void DSimBus::load(const
       if(type == "GENCLS") {
 	ClassicalGen *clgen;
 	clgen = new ClassicalGen;
-	p_gen[i] = dynamic_cast<BaseGenModel*>(clgen);
+	p_gen[i] = clgen;
       }
 
 
@@ -178,7 +178,7 @@ void DSimBus::load(const
       p_gen[i]->load(data,i); // load data
 
       // Set number of equations for this generator
-      p_neqsgen[i] = p_gen[i]->vectorSize();
+      p_gen[i]->vectorSize(&p_neqsgen[i]);
 
       /* Updae number of variables for this bus */
       p_nvar += p_neqsgen[i];

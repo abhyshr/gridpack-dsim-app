@@ -26,7 +26,7 @@ ClassicalGen::~ClassicalGen(void)
  * @param index of generator on bus
  * TODO: might want to move this functionality to BaseGeneratorModel
  */
-void ClassicalGen::load(boost::shared_ptr<gridpack::component::DataCollection> data, int idx)
+void ClassicalGen::load(const boost::shared_ptr<gridpack::component::DataCollection> data, int idx)
 {
   BaseGenModel::load(data,idx); // load parameters in base generator model
 
@@ -100,10 +100,10 @@ void ClassicalGen::write(const char* signal, char* string)
  *  Set the number of variables for this generator model
  *  @param [output] number of variables for this model
  */
-int ClassicalGen::vectorSize()
+bool ClassicalGen::vectorSize(int *nvar) const
 {
-  int nvar = 2;
-  return nvar;
+  *nvar = 2;
+  return true;
 }
 
 /**
@@ -113,10 +113,10 @@ int ClassicalGen::vectorSize()
 */
 void ClassicalGen::setValues(gridpack::ComplexType *values)
 {
-  if(mode == XVECTOBUS) {
+  if(p_mode == XVECTOBUS) {
     p_delta = real(values[0]);
     p_dw    = real(values[1]);
-  } else if(mode == XDOTVECTOBUS) {
+  } else if(p_mode == XDOTVECTOBUS) {
     p_deltadot = real(values[0]);
     p_dwdot    = real(values[1]);
   }
@@ -131,9 +131,9 @@ void ClassicalGen::setValues(gridpack::ComplexType *values)
 bool ClassicalGen::vectorValues(gridpack::ComplexType *values)
 {
   int delta_idx = 0, dw_idx = 1;
-  if(mode == FAULT_EVAL) {
+  if(p_mode == FAULT_EVAL) {
     values[delta_idx] = values[dw_idx] = 0.0;
-  } else if(mode == RESIDUAL_EVAL) {
+  } else if(p_mode == RESIDUAL_EVAL) {
     // Generator equations
     values[delta_idx] = p_dw/OMEGA_S - p_deltadot;
     values[dw_idx]    = (p_Pm - VD*p_Ep*sin(p_delta)/p_Xdp + VQ*p_Ep*cos(p_delta)/p_Xdp - p_D*p_dw)/(2*p_H) - p_dwdot;
@@ -165,7 +165,7 @@ void ClassicalGen::getCurrent(double *IGD, double *IGQ)
 bool ClassicalGen::matrixDiagEntries(int *nval,int *row, int *col, gridpack::ComplexType *values)
 {
   int idx = 0;
-  if(mode == FAULT_EVAL) {
+  if(p_mode == FAULT_EVAL) {
     row[idx] = 0; col[idx] = 0;
     values[idx] = 1.0;
     idx++;
@@ -173,7 +173,7 @@ bool ClassicalGen::matrixDiagEntries(int *nval,int *row, int *col, gridpack::Com
     values[idx] = 1.0;
     idx++;
     *nval = idx;
-  } else if(mode == DIG_DV) {
+  } else if(p_mode == DIG_DV) {
     row[idx] = 0; col[idx] = 0;
     values[idx] =  1/p_Xdp;
     idx++;
@@ -182,7 +182,7 @@ bool ClassicalGen::matrixDiagEntries(int *nval,int *row, int *col, gridpack::Com
     idx++;
 
     *nval = idx;
-  } else if(mode == DFG_DV) {
+  } else if(p_mode == DFG_DV) {
     row[idx] = 1; col[idx] = 0;
     values[idx] = (-p_Ep*sin(p_delta)/p_Xdp)/(2*p_H);
     idx++;
@@ -191,7 +191,7 @@ bool ClassicalGen::matrixDiagEntries(int *nval,int *row, int *col, gridpack::Com
     idx++;
 
     *nval = idx;
-  } else if(mode == DIG_DX) {
+  } else if(p_mode == DIG_DX) {
     row[idx] = 0; col[idx] = 0;
     values[idx] = p_Ep*sin(p_delta)/p_Xdp;
     idx++;
