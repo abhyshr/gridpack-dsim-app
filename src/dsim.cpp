@@ -86,10 +86,10 @@ void DSim::setup()
   // Set up solver
   int lsize = p_X->localSize();
 
-  gridpack::math::DAESolver::JacobianBuilder daerhsjacobian = boost::ref(*this);
-  gridpack::math::DAESolver::FunctionBuilder daerhsfunction = boost::ref(*this);
+  gridpack::math::DAESolver::JacobianBuilder daejacobian = boost::ref(*this);
+  gridpack::math::DAESolver::FunctionBuilder daefunction = boost::ref(*this);
 
-  p_daesolver = new gridpack::math::DAESolver(p_comm,lsize,daerhsjacobian,daerhsfunction);
+  p_daesolver = new gridpack::math::DAESolver(p_comm,lsize,daejacobian,daefunction);
 
   // Create nonlinear solver for solving the algebraic equations at fault-on/fault-off time instants
   gridpack::math::NonlinearSolver::JacobianBuilder jbuildf = boost::ref(*this);

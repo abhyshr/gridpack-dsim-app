@@ -6,7 +6,7 @@
 <!--    <networkConfiguration> IEEE_145bus_v23_PSLF.raw </networkConfiguration>
     <generatorParameters>IEEE_145b_classical_model.dyr</generatorParameters>
 -->
-    <simulationTime>2.0</simulationTime>
+    <simulationTime>10.0</simulationTime>
     <timeStep>0.01</timeStep>
     <faultbus>9</faultbus>
     <faultontime>0.1</faultofftime>
