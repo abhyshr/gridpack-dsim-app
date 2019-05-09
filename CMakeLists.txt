@@ -18,15 +18,19 @@ gridpack_setup()
 
 add_definitions(${GRIDPACK_DEFINITIONS})
 include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src/network)
+include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src/factory)
+include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src/utils)
+include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src/models/generators)
 include_directories(BEFORE ${GRIDPACK_INCLUDE_DIRS})
 
 add_executable(dsim.x
 	dsim_app.cpp
 	src/dsim.cpp
-	src/dsimnetwork.cpp
-	src/dsimfactory.cpp
-	src/base_gen_model.cpp
-	src/classical_gen_model.cpp
+	src/network/dsimnetwork.cpp
+	src/factory/dsimfactory.cpp
+	src/models/generators/base_gen_model.cpp
+	src/models/generators/classical_gen_model.cpp
 )
 
 target_link_libraries(dsim.x ${GRIDPACK_LIBS})
