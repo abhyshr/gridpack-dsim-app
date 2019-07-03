@@ -131,6 +131,7 @@ void ClassicalGen::setValues(gridpack::ComplexType *values)
 bool ClassicalGen::vectorValues(gridpack::ComplexType *values)
 {
   int delta_idx = 0, dw_idx = 1;
+  // On fault (p_mode == FAULT_EVAL flag), the generator variables are held constant. This is done by setting the vector values of residual function to 0.0.
   if(p_mode == FAULT_EVAL) {
     values[delta_idx] = values[dw_idx] = 0.0;
   } else if(p_mode == RESIDUAL_EVAL) {
@@ -166,6 +167,7 @@ bool ClassicalGen::matrixDiagEntries(int *nval,int *row, int *col, gridpack::Com
 {
   int idx = 0;
   if(p_mode == FAULT_EVAL) {
+  // On fault (p_mode == FAULT_EVAL flag), the generator variables are held constant. This is done by setting the diagonal matrix entries to 1.0 and all other entries to 0. The residual function values are already set to 0.0 in the vector values function. This results in the equation 1*dx = 0.0 such that dx = 0.0 and hence x does not get changed.
     row[idx] = 0; col[idx] = 0;
     values[idx] = 1.0;
     idx++;
@@ -174,6 +176,7 @@ bool ClassicalGen::matrixDiagEntries(int *nval,int *row, int *col, gridpack::Com
     idx++;
     *nval = idx;
   } else if(p_mode == DIG_DV) {
+    // These are the partial derivatives of the generator currents (see getCurrent function) w.r.t to the voltage variables VD and VQ
     row[idx] = 0; col[idx] = 0;
     values[idx] =  1/p_Xdp;
     idx++;
@@ -183,6 +186,7 @@ bool ClassicalGen::matrixDiagEntries(int *nval,int *row, int *col, gridpack::Com
 
     *nval = idx;
   } else if(p_mode == DFG_DV) {
+    // These are the partial derivatives of the generator equations w.r.t voltage variables VD and VQ
     row[idx] = 1; col[idx] = 0;
     values[idx] = (-p_Ep*sin(p_delta)/p_Xdp)/(2*p_H);
     idx++;
@@ -192,6 +196,7 @@ bool ClassicalGen::matrixDiagEntries(int *nval,int *row, int *col, gridpack::Com
 
     *nval = idx;
   } else if(p_mode == DIG_DX) {
+    // These are the partial derivatives of the generator currents (see getCurrent) w.r.t. generator variables
     row[idx] = 0; col[idx] = 0;
     values[idx] = p_Ep*sin(p_delta)/p_Xdp;
     idx++;
